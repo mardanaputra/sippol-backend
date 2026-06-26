@@ -242,13 +242,7 @@ class AuthController extends Controller
             'password' => \Illuminate\Support\Facades\Hash::make($request->password),
         ]);
 
-        // Log activity
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'TAMBAH_USER',
-            'description' => 'Mendaftarkan admin baru: ' . $user->username,
-            'ip_address' => $request->ip()
-        ]);
+
 
         return response()->json([
             'success' => true,
@@ -364,13 +358,7 @@ class AuthController extends Controller
 
         $username = $user->username;
 
-        // Log activity
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'HAPUS_USER',
-            'description' => 'Menghapus akun admin ' . $username,
-            'ip_address' => request()->ip()
-        ]);
+
 
         $user->delete();
 
@@ -407,13 +395,7 @@ class AuthController extends Controller
 
         $user->update(['role' => $request->role]);
 
-        // Log activity
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'UBAH_ROLE',
-            'description' => 'Mengubah hak akses user ' . $user->username . ' menjadi ' . $request->role,
-            'ip_address' => $request->ip()
-        ]);
+
 
         return response()->json([
             'success' => true,
