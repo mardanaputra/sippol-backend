@@ -7,6 +7,7 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Models\Pengaduan;
 use App\Models\Disposisi;
+use Illuminate\Support\Facades\Http;
 
 class SippolApiTest extends TestCase
 {
@@ -20,7 +21,9 @@ class SippolApiTest extends TestCase
         User::factory()->create([
             'name' => 'Admin SIPPOL',
             'username' => 'admin',
+            'email' => 'admin@sippol.com',
             'password' => bcrypt('admin'),
+            'role' => 'super_admin',
         ]);
     }
 
@@ -60,6 +63,205 @@ class SippolApiTest extends TestCase
             ->assertJson([
                 'success' => false,
                 'message' => 'Username atau Password yang Anda masukkan salah.'
+            ]);
+    }
+
+    public function test_login_rate_limiting_locks_after_3_failed_attempts(): void
+    {
+        // 1st attempt: fail
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'wrongpassword',
+        ]);
+        $response->assertStatus(401);
+
+        // 2nd attempt: fail
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'wrongpassword',
+        ]);
+        $response->assertStatus(401);
+
+        // 3rd attempt: fail
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'wrongpassword',
+        ]);
+        $response->assertStatus(401);
+
+        // 4th attempt: throttled (429)
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'wrongpassword',
+        ]);
+        $response->assertStatus(429)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Terlalu banyak percobaan login. Akun Anda dibekukan sementara selama 5 menit.'
+            ]);
+    }
+
+    public function test_login_fails_if_captcha_invalid(): void
+    {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify' => Http::response(['success' => false], 200),
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'admin',
+            'captcha_token' => 'invalid-token',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => "Validasi Captcha gagal, silakan centang ulang kotak I'm not a robot."
+            ]);
+    }
+
+    public function test_login_succeeds_if_captcha_valid(): void
+    {
+        Http::fake([
+            'https://www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true], 200),
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'admin',
+            'captcha_token' => 'valid-token',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Login berhasil.',
+            ]);
+    }
+
+    public function test_registration_fails_if_password_weak(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'John Doe',
+            'username' => 'johndoe',
+            'email' => 'johndoe@example.com',
+            'password' => 'weak', // weak password (short, no mixedCase, no number, no symbol)
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    public function test_registration_fails_if_email_invalid(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'John Doe',
+            'username' => 'johndoe',
+            'email' => 'invalid-email',
+            'password' => 'SecurePass123!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_registration_fails_if_email_taken(): void
+    {
+        // First user
+        $this->postJson('/api/register', [
+            'name' => 'John Doe',
+            'username' => 'johndoe',
+            'email' => 'johndoe@example.com',
+            'password' => 'SecurePass123!',
+        ]);
+
+        // Second user with same email
+        $response = $this->postJson('/api/register', [
+            'name' => 'Jane Doe',
+            'username' => 'janedoe',
+            'email' => 'johndoe@example.com',
+            'password' => 'SecurePass123!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_registration_succeeds_if_password_strong(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'John Doe',
+            'username' => 'johndoe2',
+            'email' => 'johndoe2@example.com',
+            'password' => 'SecurePass123!', // strong password
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Pengguna baru berhasil didaftarkan.',
+            ]);
+    }
+
+    public function test_authenticated_admin_can_store_new_user(): void
+    {
+        $admin = User::where('username', 'admin')->first();
+
+        $response = $this->actingAs($admin)
+            ->postJson('/api/admin/users', [
+                'name' => 'Jane Admin',
+                'username' => 'janeadmin',
+                'email' => 'janeadmin@sippol.com',
+                'password' => 'SecurePass123!',
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Pengguna baru berhasil didaftarkan.',
+            ]);
+    }
+
+    public function test_unauthenticated_user_cannot_store_new_user(): void
+    {
+        $response = $this->postJson('/api/admin/users', [
+            'name' => 'Jane Admin',
+            'username' => 'janeadmin',
+            'email' => 'janeadmin@sippol.com',
+            'password' => 'SecurePass123!',
+        ]);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_change_password_fails_if_password_weak(): void
+    {
+        $user = User::where('username', 'admin')->first();
+        
+        $response = $this->actingAs($user)
+            ->postJson('/api/change-password', [
+                'current_password' => 'admin',
+                'new_password' => 'weak',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['new_password']);
+    }
+
+    public function test_change_password_succeeds_if_password_strong(): void
+    {
+        $user = User::where('username', 'admin')->first();
+        
+        $response = $this->actingAs($user)
+            ->postJson('/api/change-password', [
+                'current_password' => 'admin',
+                'new_password' => 'SecurePass123!',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Password Anda berhasil diperbarui.',
             ]);
     }
 
@@ -289,6 +491,211 @@ class SippolApiTest extends TestCase
 
         $this->assertDatabaseMissing('pengaduans', [
             'id_tiket' => 'TKT-20260624-006'
+        ]);
+    }
+
+    public function test_only_super_admin_can_list_users(): void
+    {
+        // 1. Non-super admin cannot list users
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($regularAdmin)
+            ->getJson('/api/users');
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+            ]);
+
+        // 2. Super admin can list users
+        $superAdmin = User::where('role', 'super_admin')->first();
+
+        $responseSuper = $this->actingAs($superAdmin)
+            ->getJson('/api/users');
+
+        $responseSuper->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'users'
+            ]);
+    }
+
+    public function test_non_super_admin_cannot_store_new_user(): void
+    {
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($regularAdmin)
+            ->postJson('/api/admin/users', [
+                'name' => 'Test User',
+                'username' => 'testuser',
+                'email' => 'test@sippol.com',
+                'password' => 'SecurePass123!',
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+            ]);
+    }
+
+    public function test_only_super_admin_can_delete_user(): void
+    {
+        $targetUser = User::factory()->create(['role' => 'admin']);
+
+        // 1. Non-super admin cannot delete user
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($regularAdmin)
+            ->deleteJson('/api/admin/users/' . $targetUser->id);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+            ]);
+
+        // 2. Super admin can delete user
+        $superAdmin = User::where('role', 'super_admin')->first();
+
+        $responseSuper = $this->actingAs($superAdmin)
+            ->deleteJson('/api/admin/users/' . $targetUser->id);
+
+        $responseSuper->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Pengguna berhasil dihapus.'
+            ]);
+
+        $this->assertDatabaseMissing('users', [
+            'id' => $targetUser->id
+        ]);
+    }
+
+    public function test_only_super_admin_can_access_activity_logs(): void
+    {
+        // 1. Regular admin gets 403
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($regularAdmin)
+            ->getJson('/api/admin/activity-logs');
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+            ]);
+
+        // 2. Super admin gets 200 and can see logs
+        $superAdmin = User::where('role', 'super_admin')->first();
+
+        $responseSuper = $this->actingAs($superAdmin)
+            ->getJson('/api/admin/activity-logs');
+
+        $responseSuper->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'logs'
+            ]);
+    }
+
+    public function test_activity_logging_on_login_register_delete(): void
+    {
+        $superAdmin = User::where('role', 'super_admin')->first();
+
+        // 1. Test LOGIN logging
+        $responseLogin = $this->postJson('/api/login', [
+            'username' => 'admin',
+            'password' => 'admin',
+        ]);
+        $responseLogin->assertStatus(200);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $superAdmin->id,
+            'action' => 'LOGIN',
+        ]);
+
+        // 2. Test TAMBAH_USER logging
+        $responseStore = $this->actingAs($superAdmin)
+            ->postJson('/api/admin/users', [
+                'name' => 'New Admin Budi',
+                'username' => 'budiadmin',
+                'email' => 'budi@sippol.com',
+                'password' => 'StrongPass123!',
+            ]);
+        $responseStore->assertStatus(201);
+
+        $newAdmin = User::where('username', 'budiadmin')->first();
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $superAdmin->id,
+            'action' => 'TAMBAH_USER',
+            'description' => 'Mendaftarkan admin baru: budiadmin',
+        ]);
+
+        // 3. Test HAPUS_USER logging
+        $responseDelete = $this->actingAs($superAdmin)
+            ->deleteJson('/api/admin/users/' . $newAdmin->id);
+        $responseDelete->assertStatus(200);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $superAdmin->id,
+            'action' => 'HAPUS_USER',
+            'description' => 'Menghapus akun admin budiadmin',
+        ]);
+    }
+
+    public function test_only_super_admin_can_change_user_role(): void
+    {
+        $targetUser = User::factory()->create(['role' => 'admin']);
+
+        // 1. Regular admin gets 403
+        $regularAdmin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($regularAdmin)
+            ->putJson('/api/admin/users/' . $targetUser->id . '/role', [
+                'role' => 'super_admin'
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+            ]);
+
+        // 2. Super admin gets 422 if role is invalid
+        $superAdmin = User::where('role', 'super_admin')->first();
+
+        $responseInvalid = $this->actingAs($superAdmin)
+            ->putJson('/api/admin/users/' . $targetUser->id . '/role', [
+                'role' => 'invalid_role'
+            ]);
+
+        $responseInvalid->assertStatus(422)
+            ->assertJsonValidationErrors(['role']);
+
+        // 3. Super admin can successfully update role to super_admin
+        $responseSuccess = $this->actingAs($superAdmin)
+            ->putJson('/api/admin/users/' . $targetUser->id . '/role', [
+                'role' => 'super_admin'
+            ]);
+
+        $responseSuccess->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Berhasil mengubah hak akses user menjadi super_admin'
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $targetUser->id,
+            'role' => 'super_admin'
+        ]);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $superAdmin->id,
+            'action' => 'UBAH_ROLE',
+            'description' => 'Mengubah hak akses user ' . $targetUser->username . ' menjadi super_admin',
         ]);
     }
 }

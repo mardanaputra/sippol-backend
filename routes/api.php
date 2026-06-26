@@ -18,9 +18,11 @@ use App\Http\Controllers\Api\SdaPersonelController;
 use App\Http\Controllers\Api\SdaKegiatanController;
 use App\Http\Controllers\Api\SdaPustakaController;
 use App\Http\Controllers\Api\SatpolKegiatanController;
+use App\Http\Controllers\Api\ActivityLogController;
 
 // Auth Routes (Public)
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
 // Complaint Public Routes (Warga)
 Route::post('/pengaduan', [PengaduanController::class, 'store']);
@@ -31,6 +33,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth Status & Session
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+    Route::get('/users', [AuthController::class, 'users']);
+    Route::post('/admin/users', [AuthController::class, 'store']);
+    Route::delete('/admin/users/{id}', [AuthController::class, 'destroy']);
+    Route::put('/admin/users/{id}/role', [AuthController::class, 'changeRole']);
+    Route::get('/admin/activity-logs', [ActivityLogController::class, 'index']);
 
     // Admin Complaint Management
     Route::get('/pengaduan', [PengaduanController::class, 'index']);

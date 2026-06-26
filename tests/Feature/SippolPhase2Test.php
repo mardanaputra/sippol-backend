@@ -34,6 +34,7 @@ class SippolPhase2Test extends TestCase
             'name' => 'Admin SIPPOL',
             'username' => 'admin',
             'password' => bcrypt('admin'),
+            'role' => 'super_admin',
         ]);
 
         $this->token = $this->admin->createToken('test-token')->plainTextToken;

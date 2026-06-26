@@ -20,7 +20,9 @@ class UserSeeder extends Seeder
             User::create([
                 'name' => 'Admin SIPPOL',
                 'username' => 'admin',
+                'email' => 'admin@sippol.com',
                 'password' => Hash::make('admin'),
+                'role' => 'super_admin',
             ]);
         }
 
