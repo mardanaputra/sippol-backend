@@ -79,10 +79,10 @@ class ActivityObserver
         list($modelName, $identifier) = $this->getModelNameAndIdentifier($model);
 
         if ($model instanceof User) {
-            $action = 'TAMBAH_USER';
+            $action = 'TAMBAH USER';
             $description = "Mendaftarkan admin baru: {$identifier}";
         } else {
-            $action = 'TAMBAH_DATA';
+            $action = 'TAMBAH DATA';
             $description = "Menambahkan data {$modelName} baru: {$identifier}";
         }
 
@@ -125,10 +125,10 @@ class ActivityObserver
 
         if ($model instanceof User) {
             if (isset($dirty['role']) && count($dirty) === 1) {
-                $action = 'UBAH_ROLE';
+                $action = 'UBAH ROLE';
                 $description = "Mengubah hak akses user {$identifier} menjadi {$model->role}";
             } else {
-                $action = 'UPDATE_DATA';
+                $action = 'UPDATE DATA';
                 $description = "Mengubah data {$modelName} ({$identifier}): mengubah {$changesDescription}";
             }
         } else {
@@ -157,10 +157,10 @@ class ActivityObserver
         list($modelName, $identifier) = $this->getModelNameAndIdentifier($model);
 
         if ($model instanceof User) {
-            $action = 'HAPUS_USER';
+            $action = 'HAPUS USER';
             $description = "Menghapus akun admin {$identifier}";
         } else {
-            $action = 'HAPUS_DATA';
+            $action = 'HAPUS DATA';
             $description = "Menghapus data {$modelName}: {$identifier}";
         }
 
