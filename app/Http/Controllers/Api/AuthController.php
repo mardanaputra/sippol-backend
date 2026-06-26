@@ -19,6 +19,15 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        // Fallback: Create default admin user if it does not exist in the database
+        if ($credentials['username'] === 'admin' && !User::where('username', 'admin')->exists()) {
+            User::create([
+                'name' => 'Admin SIPPOL',
+                'username' => 'admin',
+                'password' => \Illuminate\Support\Facades\Hash::make('admin'),
+            ]);
+        }
+
         if (Auth::attempt($credentials)) {
             /** @var User $user */
             $user = Auth::user();
