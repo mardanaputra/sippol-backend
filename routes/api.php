@@ -49,62 +49,70 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/disposisi', [DisposisiController::class, 'store']);
 
     // Modul Trantibum (Ketertiban Umum)
-    Route::get('/trantib/patroli', [ReguPatroliController::class, 'index']);
-    Route::post('/trantib/patroli', [ReguPatroliController::class, 'store']);
-    Route::put('/trantib/patroli/{id?}', [ReguPatroliController::class, 'update']);
-    Route::delete('/trantib/patroli/{id?}', [ReguPatroliController::class, 'destroy']);
+    Route::middleware('role:bidang_trantib')->group(function () {
+        Route::get('/trantib/patroli', [ReguPatroliController::class, 'index']);
+        Route::post('/trantib/patroli', [ReguPatroliController::class, 'store']);
+        Route::put('/trantib/patroli/{id?}', [ReguPatroliController::class, 'update']);
+        Route::delete('/trantib/patroli/{id?}', [ReguPatroliController::class, 'destroy']);
 
-    Route::get('/trantib/penertiban', [PenertibanK3Controller::class, 'index']);
-    Route::post('/trantib/penertiban', [PenertibanK3Controller::class, 'store']);
-    Route::put('/trantib/penertiban/{id?}', [PenertibanK3Controller::class, 'update']);
-    Route::delete('/trantib/penertiban/{id?}', [PenertibanK3Controller::class, 'destroy']);
+        Route::get('/trantib/penertiban', [PenertibanK3Controller::class, 'index']);
+        Route::post('/trantib/penertiban', [PenertibanK3Controller::class, 'store']);
+        Route::put('/trantib/penertiban/{id?}', [PenertibanK3Controller::class, 'update']);
+        Route::delete('/trantib/penertiban/{id?}', [PenertibanK3Controller::class, 'destroy']);
+    });
 
     // Modul Linmas (Perlindungan Masyarakat)
-    Route::get('/linmas/satlinmas', [SatlinmasController::class, 'index']);
-    Route::post('/linmas/satlinmas', [SatlinmasController::class, 'store']);
-    Route::put('/linmas/satlinmas/{id?}', [SatlinmasController::class, 'update']);
-    Route::delete('/linmas/satlinmas/{id?}', [SatlinmasController::class, 'destroy']);
+    Route::middleware('role:bidang_linmas')->group(function () {
+        Route::get('/linmas/satlinmas', [SatlinmasController::class, 'index']);
+        Route::post('/linmas/satlinmas', [SatlinmasController::class, 'store']);
+        Route::put('/linmas/satlinmas/{id?}', [SatlinmasController::class, 'update']);
+        Route::delete('/linmas/satlinmas/{id?}', [SatlinmasController::class, 'destroy']);
 
-    Route::get('/linmas/penertiban', [PenertibanTrantibumController::class, 'index']);
-    Route::post('/linmas/penertiban', [PenertibanTrantibumController::class, 'store']);
-    Route::put('/linmas/penertiban/{id?}', [PenertibanTrantibumController::class, 'update']);
-    Route::delete('/linmas/penertiban/{id?}', [PenertibanTrantibumController::class, 'destroy']);
+        Route::get('/linmas/penertiban', [PenertibanTrantibumController::class, 'index']);
+        Route::post('/linmas/penertiban', [PenertibanTrantibumController::class, 'store']);
+        Route::put('/linmas/penertiban/{id?}', [PenertibanTrantibumController::class, 'update']);
+        Route::delete('/linmas/penertiban/{id?}', [PenertibanTrantibumController::class, 'destroy']);
 
-    Route::get('/linmas/kegiatan', [KegiatanLinmasController::class, 'index']);
-    Route::post('/linmas/kegiatan', [KegiatanLinmasController::class, 'store']);
-    Route::put('/linmas/kegiatan/{id?}', [KegiatanLinmasController::class, 'update']);
-    Route::delete('/linmas/kegiatan/{id?}', [KegiatanLinmasController::class, 'destroy']);
+        Route::get('/linmas/kegiatan', [KegiatanLinmasController::class, 'index']);
+        Route::post('/linmas/kegiatan', [KegiatanLinmasController::class, 'store']);
+        Route::put('/linmas/kegiatan/{id?}', [KegiatanLinmasController::class, 'update']);
+        Route::delete('/linmas/kegiatan/{id?}', [KegiatanLinmasController::class, 'destroy']);
+    });
 
     // Modul Perada (Penegakan Perda/Perbup)
-    Route::get('/perada/regulasi', [PerdaPerbupController::class, 'index']);
-    Route::post('/perada/regulasi', [PerdaPerbupController::class, 'store']);
-    Route::put('/perada/regulasi/{id?}', [PerdaPerbupController::class, 'update']);
-    Route::delete('/perada/regulasi/{id?}', [PerdaPerbupController::class, 'destroy']);
+    Route::middleware('role:bidang_perada')->group(function () {
+        Route::get('/perada/regulasi', [PerdaPerbupController::class, 'index']);
+        Route::post('/perada/regulasi', [PerdaPerbupController::class, 'store']);
+        Route::put('/perada/regulasi/{id?}', [PerdaPerbupController::class, 'update']);
+        Route::delete('/perada/regulasi/{id?}', [PerdaPerbupController::class, 'destroy']);
 
-    Route::get('/perada/pelanggaran', [KatalogPelanggaranController::class, 'index']);
-    Route::post('/perada/pelanggaran', [KatalogPelanggaranController::class, 'store']);
-    Route::delete('/perada/pelanggaran/{id?}', [KatalogPelanggaranController::class, 'destroy']);
+        Route::get('/perada/pelanggaran', [KatalogPelanggaranController::class, 'index']);
+        Route::post('/perada/pelanggaran', [KatalogPelanggaranController::class, 'store']);
+        Route::delete('/perada/pelanggaran/{id?}', [KatalogPelanggaranController::class, 'destroy']);
 
-    Route::get('/perada/penegakan', [PenegakanPeradaController::class, 'index']);
-    Route::post('/perada/penegakan', [PenegakanPeradaController::class, 'store']);
-    Route::put('/perada/penegakan/{id?}', [PenegakanPeradaController::class, 'update']);
-    Route::delete('/perada/penegakan/{id?}', [PenegakanPeradaController::class, 'destroy']);
+        Route::get('/perada/penegakan', [PenegakanPeradaController::class, 'index']);
+        Route::post('/perada/penegakan', [PenegakanPeradaController::class, 'store']);
+        Route::put('/perada/penegakan/{id?}', [PenegakanPeradaController::class, 'update']);
+        Route::delete('/perada/penegakan/{id?}', [PenegakanPeradaController::class, 'destroy']);
+    });
 
     // Modul SDA (Sumber Daya Aparatur)
-    Route::get('/sda/personel', [SdaPersonelController::class, 'index']);
-    Route::post('/sda/personel', [SdaPersonelController::class, 'store']);
-    Route::put('/sda/personel/{id?}', [SdaPersonelController::class, 'update']);
-    Route::delete('/sda/personel/{id?}', [SdaPersonelController::class, 'destroy']);
+    Route::middleware('role:bidang_sda')->group(function () {
+        Route::get('/sda/personel', [SdaPersonelController::class, 'index']);
+        Route::post('/sda/personel', [SdaPersonelController::class, 'store']);
+        Route::put('/sda/personel/{id?}', [SdaPersonelController::class, 'update']);
+        Route::delete('/sda/personel/{id?}', [SdaPersonelController::class, 'destroy']);
 
-    Route::get('/sda/kegiatan', [SdaKegiatanController::class, 'index']);
-    Route::post('/sda/kegiatan', [SdaKegiatanController::class, 'store']);
-    Route::put('/sda/kegiatan/{id?}', [SdaKegiatanController::class, 'update']);
-    Route::delete('/sda/kegiatan/{id?}', [SdaKegiatanController::class, 'destroy']);
+        Route::get('/sda/kegiatan', [SdaKegiatanController::class, 'index']);
+        Route::post('/sda/kegiatan', [SdaKegiatanController::class, 'store']);
+        Route::put('/sda/kegiatan/{id?}', [SdaKegiatanController::class, 'update']);
+        Route::delete('/sda/kegiatan/{id?}', [SdaKegiatanController::class, 'destroy']);
 
-    Route::get('/sda/pustaka', [SdaPustakaController::class, 'index']);
-    Route::post('/sda/pustaka', [SdaPustakaController::class, 'store']);
-    Route::put('/sda/pustaka/{id?}', [SdaPustakaController::class, 'update']);
-    Route::delete('/sda/pustaka/{id?}', [SdaPustakaController::class, 'destroy']);
+        Route::get('/sda/pustaka', [SdaPustakaController::class, 'index']);
+        Route::post('/sda/pustaka', [SdaPustakaController::class, 'store']);
+        Route::put('/sda/pustaka/{id?}', [SdaPustakaController::class, 'update']);
+        Route::delete('/sda/pustaka/{id?}', [SdaPustakaController::class, 'destroy']);
+    });
 
     // Modul Kegiatan Satpol PP (Portal Kegiatan)
     Route::get('/admin/kegiatan', [SatpolKegiatanController::class, 'index']);

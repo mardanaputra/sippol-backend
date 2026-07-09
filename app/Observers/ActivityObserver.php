@@ -3,7 +3,6 @@
 namespace App\Observers;
 
 use App\Models\ActivityLog;
-use App\Models\User;
 
 class ActivityObserver
 {
@@ -33,10 +32,6 @@ class ActivityObserver
         ];
         
         $readableName = $modelNames[$className] ?? $className;
-
-        if ($model instanceof User) {
-            return [$readableName, $model->username];
-        }
 
         // Try to find the best identifying field for the entity
         $identifiers = [
@@ -78,18 +73,10 @@ class ActivityObserver
         $userId = auth()->id();
         list($modelName, $identifier) = $this->getModelNameAndIdentifier($model);
 
-        if ($model instanceof User) {
-            $action = 'TAMBAH USER';
-            $description = "Mendaftarkan admin baru: {$identifier}";
-        } else {
-            $action = 'TAMBAH DATA';
-            $description = "Menambahkan data {$modelName} baru: {$identifier}";
-        }
-
         ActivityLog::create([
             'user_id' => $userId,
-            'action' => $action,
-            'description' => $description,
+            'action' => 'TAMBAH_DATA', // Consistent with user requests: TAMBAH_DATA / TAMBAH_PERSONEL
+            'description' => "Menambahkan data {$modelName} baru: {$identifier}",
             'ip_address' => request()->ip()
         ]);
     }
@@ -123,23 +110,10 @@ class ActivityObserver
 
         $changesDescription = implode(', ', $changes);
 
-        if ($model instanceof User) {
-            if (isset($dirty['role']) && count($dirty) === 1) {
-                $action = 'UBAH ROLE';
-                $description = "Mengubah hak akses user {$identifier} menjadi {$model->role}";
-            } else {
-                $action = 'UPDATE DATA';
-                $description = "Mengubah data {$modelName} ({$identifier}): mengubah {$changesDescription}";
-            }
-        } else {
-            $action = 'UPDATE_DATA';
-            $description = "Mengubah data {$modelName} ({$identifier}): mengubah {$changesDescription}";
-        }
-
         ActivityLog::create([
             'user_id' => $userId,
-            'action' => $action,
-            'description' => $description,
+            'action' => 'UPDATE_DATA',
+            'description' => "Mengubah data {$modelName} ({$identifier}): mengubah {$changesDescription}",
             'ip_address' => request()->ip()
         ]);
     }
@@ -156,18 +130,10 @@ class ActivityObserver
         $userId = auth()->id();
         list($modelName, $identifier) = $this->getModelNameAndIdentifier($model);
 
-        if ($model instanceof User) {
-            $action = 'HAPUS USER';
-            $description = "Menghapus akun admin {$identifier}";
-        } else {
-            $action = 'HAPUS DATA';
-            $description = "Menghapus data {$modelName}: {$identifier}";
-        }
-
         ActivityLog::create([
             'user_id' => $userId,
-            'action' => $action,
-            'description' => $description,
+            'action' => 'HAPUS_DATA',
+            'description' => "Menghapus data {$modelName}: {$identifier}",
             'ip_address' => request()->ip()
         ]);
     }

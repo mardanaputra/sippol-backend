@@ -13,10 +13,11 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
-        if (auth()->user()->role !== 'super_admin') {
+        $userRole = auth()->user()->role;
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+                'message' => 'Akses ditolak. Anda tidak memiliki hak akses untuk melihat log aktivitas.'
             ], 403);
         }
 

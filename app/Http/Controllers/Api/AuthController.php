@@ -220,6 +220,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'username' => 'required|string|unique:users,username|max:255',
             'email' => 'required|email|unique:users,email',
+            'role' => 'nullable|string|in:admin,super_admin,bidang_trantib,bidang_linmas,bidang_perada,bidang_sda',
             'password' => [
                 'required',
                 'string',
@@ -239,6 +240,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'username' => $request->username,
             'email' => $request->email,
+            'role' => $request->role ?? 'admin',
             'password' => \Illuminate\Support\Facades\Hash::make($request->password),
         ]);
 
@@ -321,14 +323,15 @@ class AuthController extends Controller
      */
     public function users(Request $request)
     {
-        if (auth()->user()->role !== 'super_admin') {
+        $userRole = auth()->user()->role;
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
+                'message' => 'Akses ditolak. Anda tidak memiliki hak akses untuk melihat daftar pengguna.'
             ], 403);
         }
 
-        $users = User::orderBy('name', 'asc')->get(['id', 'name', 'username', 'email', 'created_at']);
+        $users = User::orderBy('name', 'asc')->get(['id', 'name', 'username', 'email', 'role', 'created_at']);
         return response()->json([
             'success' => true,
             'users' => $users
