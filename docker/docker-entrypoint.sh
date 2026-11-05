@@ -1,7 +1,11 @@
 #!/bin/sh
 set -e
 
-# 0. Ensure .env exists so artisan key:generate and configs work properly
+# 0. Clean stale bootstrap caches (e.g. dev service providers from build host)
+rm -f /app/bootstrap/cache/*.php
+mkdir -p /app/bootstrap/cache
+
+# 1. Ensure .env exists so artisan key:generate and configs work properly
 if [ ! -f /app/.env ]; then
     if [ -f /app/.env.example ]; then
         echo "Creating .env from .env.example..."
@@ -23,7 +27,7 @@ if [ -f /app/.env ]; then
     fi
 fi
 
-# 1. Handle Database
+# 2. Handle Database
 if [ "$DB_CONNECTION" = "mysql" ]; then
     echo "Checking MySQL connection at ${DB_HOST:-mysql}:${DB_PORT:-3306}..."
     MAX_TRIES=30
@@ -64,10 +68,14 @@ elif [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
     fi
 fi
 
-# 2. Generate APP_KEY if missing
+# 3. Generate APP_KEY if missing
 if [ -z "$APP_KEY" ]; then
     echo "APP_KEY is not set. Generating application key..."
     php artisan key:generate --force
+    CLEAN_KEY=$(grep -E "^APP_KEY=" /app/.env | head -n 1 | cut -d '=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+    if [ -n "$CLEAN_KEY" ]; then
+        export APP_KEY="$CLEAN_KEY"
+    fi
 fi
 
 # 3. Fix storage and bootstrap cache permissions
@@ -97,8 +105,10 @@ else
     echo "   To run migrations manually: docker compose exec backend php artisan migrate --force"
 fi
 
-# 6. Ensure cache is clean on start (never cache config at boot/build time)
-php artisan optimize:clear 2>/dev/null || true
+# 6. Ensure stale config/route/view caches are cleared on start
+php artisan config:clear --no-interaction 2>/dev/null || true
+php artisan route:clear --no-interaction 2>/dev/null || true
+php artisan view:clear --no-interaction 2>/dev/null || true
 
 # Execute CMD
 exec "$@"
