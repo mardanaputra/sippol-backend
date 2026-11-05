@@ -13,8 +13,7 @@ fi
 if ! grep -q "^APP_KEY=" /app/.env 2>/dev/null; then
     echo "APP_KEY=" >> /app/.env
 fi
-chmod 640 /app/.env
-chown root:www-data /app/.env
+chmod 666 /app/.env 2>/dev/null || true
 
 # 1. Handle Database
 if [ "$DB_CONNECTION" = "mysql" ]; then
@@ -75,8 +74,8 @@ chmod -R 775 /app/storage /app/bootstrap/cache
 # 4. Storage link
 php artisan storage:link --no-interaction 2>/dev/null || true
 
-# 5. Database migrations
-if [ "${AUTORUN_MIGRATIONS:-true}" = "true" ]; then
+# 5. Database migrations (manual by default for production safety)
+if [ "${AUTORUN_MIGRATIONS:-false}" = "true" ]; then
     echo "Running database migrations..."
     php artisan migrate --force --no-interaction
 
@@ -85,15 +84,13 @@ if [ "${AUTORUN_MIGRATIONS:-true}" = "true" ]; then
         echo "Running database seeders..."
         php artisan db:seed --force --no-interaction || true
     fi
+else
+    echo "ℹ️  Automatic database migration is disabled (AUTORUN_MIGRATIONS=false)."
+    echo "   To run migrations manually: docker compose exec backend php artisan migrate --force"
 fi
 
-# 6. Optimize for production if APP_ENV=production
-if [ "$APP_ENV" = "production" ]; then
-    echo "Optimizing application for production..."
-    php artisan config:cache || true
-    php artisan route:cache || true
-    php artisan view:cache || true
-fi
+# 6. Ensure cache is clean on start (never cache config at boot/build time)
+php artisan optimize:clear 2>/dev/null || true
 
 # Execute CMD
 exec "$@"
