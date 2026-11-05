@@ -97,7 +97,7 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    'key' => env('APP_KEY') ? trim(trim((string) env('APP_KEY')), "\"' \t\n\r\0\x0B") : null,
 
     'previous_keys' => [
         ...array_filter(

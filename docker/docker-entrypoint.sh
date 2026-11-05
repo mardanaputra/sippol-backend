@@ -15,6 +15,14 @@ if ! grep -q "^APP_KEY=" /app/.env 2>/dev/null; then
 fi
 chmod 666 /app/.env 2>/dev/null || true
 
+# Extract and export clean APP_KEY from /app/.env (stripping quotes and CRLF)
+if [ -f /app/.env ]; then
+    CLEAN_KEY=$(grep -E "^APP_KEY=" /app/.env | head -n 1 | cut -d '=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+    if [ -n "$CLEAN_KEY" ]; then
+        export APP_KEY="$CLEAN_KEY"
+    fi
+fi
+
 # 1. Handle Database
 if [ "$DB_CONNECTION" = "mysql" ]; then
     echo "Checking MySQL connection at ${DB_HOST:-mysql}:${DB_PORT:-3306}..."
