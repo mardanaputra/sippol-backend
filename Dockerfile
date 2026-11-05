@@ -1,5 +1,5 @@
 # ==============================================================================
-# Multi-stage Dockerfile for SIPPOL Backend (Laravel 12 API)
+# Multi-stage Dockerfile for SIPPOL Backend (Laravel 12 API with FrankenPHP)
 # ==============================================================================
 
 # Stage 1: Build composer dependencies
@@ -18,51 +18,39 @@ RUN composer install \
 COPY . .
 RUN composer dump-autoload --optimize --no-dev
 
-# Stage 2: Production PHP-FPM + Nginx runtime
-FROM php:8.2-fpm-alpine AS runner
-WORKDIR /var/www/html
+# Stage 2: Production FrankenPHP runtime
+FROM dunglas/frankenphp:1-php8.2-alpine AS runner
+WORKDIR /app
 
-# Install mlocati fast extension installer
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-
-# Install system dependencies & PHP extensions efficiently
-RUN apk add --no-cache \
-    nginx \
-    supervisor \
-    curl \
-    sqlite \
-    && install-php-extensions \
+# Install system libraries & PHP extensions
+RUN apk add --no-cache libzip-dev \
+    && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
-        pdo_sqlite \
         bcmath \
         exif \
-        gd \
-        intl \
-        opcache \
         pcntl \
         zip \
-    && mkdir -p /var/log/supervisor \
     && rm -rf /tmp/* /var/cache/apk/*
 
-# Copy Nginx, PHP, and Supervisor configurations
-COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+# Copy FrankenPHP Caddyfile, php.ini, and entrypoint
+COPY docker/Caddyfile /etc/caddy/Caddyfile
 COPY docker/php.ini $PHP_INI_DIR/conf.d/99-custom.ini
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Copy application source & vendor
-COPY . /var/www/html
-COPY --from=vendor /app/vendor /var/www/html/vendor
+COPY . /app
+COPY --from=vendor /app/vendor /app/vendor
 
 # Set storage and bootstrap cache permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache && \
+    chmod -R 775 /app/storage /app/bootstrap/cache
 
+ENV SERVER_NAME=":8000"
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://127.0.0.1:8000/up || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

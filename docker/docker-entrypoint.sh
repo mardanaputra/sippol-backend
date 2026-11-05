@@ -2,20 +2,23 @@
 set -e
 
 # 0. Ensure .env exists so artisan key:generate and configs work properly
-if [ ! -f /var/www/html/.env ]; then
-    if [ -f /var/www/html/.env.example ]; then
+if [ ! -f /app/.env ]; then
+    if [ -f /app/.env.example ]; then
         echo "Creating .env from .env.example..."
-        cp /var/www/html/.env.example /var/www/html/.env
+        cp /app/.env.example /app/.env
     else
-        touch /var/www/html/.env
+        touch /app/.env
     fi
 fi
-chmod 640 /var/www/html/.env
-chown root:www-data /var/www/html/.env
+if ! grep -q "^APP_KEY=" /app/.env 2>/dev/null; then
+    echo "APP_KEY=" >> /app/.env
+fi
+chmod 640 /app/.env
+chown root:www-data /app/.env
 
 # 1. Handle SQLite Database if configured
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
-    DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+    DB_PATH="${DB_DATABASE:-/app/database/database.sqlite}"
     if [ ! -f "$DB_PATH" ]; then
         echo "Creating SQLite database file at $DB_PATH..."
         mkdir -p "$(dirname "$DB_PATH")"
@@ -32,13 +35,13 @@ if [ -z "$APP_KEY" ]; then
 fi
 
 # 3. Fix storage and bootstrap cache permissions
-mkdir -p /var/www/html/storage/framework/cache/data \
-         /var/www/html/storage/framework/sessions \
-         /var/www/html/storage/framework/views \
-         /var/www/html/storage/logs \
-         /var/www/html/bootstrap/cache
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+mkdir -p /app/storage/framework/cache/data \
+         /app/storage/framework/sessions \
+         /app/storage/framework/views \
+         /app/storage/logs \
+         /app/bootstrap/cache
+chown -R www-data:www-data /app/storage /app/bootstrap/cache
+chmod -R 775 /app/storage /app/bootstrap/cache
 
 # 4. Storage link
 php artisan storage:link --no-interaction || true

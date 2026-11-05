@@ -1,0 +1,35 @@
+{
+	skip_install_trust
+	frankenphp
+}
+
+:8000 {
+	root * /app/public
+
+	# Max request body size (64MB) for Base64 photos & PDF uploads
+	request_body {
+		max_size 64MB
+	}
+
+	# Compression
+	encode zstd br gzip
+
+	# Security Headers
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		-Server
+		-X-Powered-By
+	}
+
+	# Deny access to hidden files (.env, .git, etc.)
+	@hiddenFiles {
+		path */.*
+		not path /.well-known/*
+	}
+	error @hiddenFiles 404
+
+	php_server
+}
