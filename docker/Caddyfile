@@ -1,6 +1,9 @@
 {
 	skip_install_trust
 	frankenphp
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 :8000 {

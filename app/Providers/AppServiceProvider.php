@@ -19,6 +19,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Enforce HTTPS in production or behind SSL reverse proxy
+        if (app()->environment('production') || str_starts_with((string) config('app.url', ''), 'https://') || request()->header('X-Forwarded-Proto') === 'https') {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         \App\Models\User::observe(\App\Observers\ActivityObserver::class);
         \App\Models\SdaPersonel::observe(\App\Observers\ActivityObserver::class);
         \App\Models\KatalogPelanggaran::observe(\App\Observers\ActivityObserver::class);

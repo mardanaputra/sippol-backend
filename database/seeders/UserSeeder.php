@@ -15,15 +15,23 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        $adminUsername = env('DEFAULT_ADMIN_USERNAME', 'admin');
+
         // Check if admin user already exists to avoid duplicates
-        if (!User::where('username', 'admin')->exists()) {
+        if (!User::where('username', $adminUsername)->exists()) {
             User::create([
-                'name' => 'Admin SIPPOL',
-                'username' => 'admin',
-                'email' => 'admin@sippol.com',
-                'password' => Hash::make('admin'),
+                'name' => env('DEFAULT_ADMIN_NAME', 'Admin SIPPOL'),
+                'username' => $adminUsername,
+                'email' => env('DEFAULT_ADMIN_EMAIL', 'admin@sippol.com'),
+                'password' => Hash::make(env('DEFAULT_ADMIN_PASSWORD', 'admin')),
                 'role' => 'super_admin',
             ]);
+        }
+
+        // Only seed sample demo complaints if SEED_DUMMY_DATA=true or in local/testing
+        $seedDummy = filter_var(env('SEED_DUMMY_DATA', false), FILTER_VALIDATE_BOOLEAN) || !app()->environment('production');
+        if (!$seedDummy) {
+            return;
         }
 
         // Seed some Pengaduan and Disposisi for Trantib

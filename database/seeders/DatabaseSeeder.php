@@ -17,8 +17,14 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
-            SippolDummySeeder::class,
             PortalBidangSeeder::class,
         ]);
+
+        $seedDummy = filter_var(env('SEED_DUMMY_DATA', false), FILTER_VALIDATE_BOOLEAN) || !app()->environment('production');
+        if ($seedDummy) {
+            $this->call([
+                SippolDummySeeder::class,
+            ]);
+        }
     }
 }
