@@ -14,6 +14,10 @@ class SippolDummySeeder extends Seeder
      */
     public function run(): void
     {
+        if (SatpolKegiatan::count() > 0) {
+            return;
+        }
+
         // 1. Seed SatpolKegiatan (Data Kegiatan Lapangan)
         $kegiatans = [
             [

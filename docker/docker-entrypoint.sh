@@ -16,8 +16,37 @@ fi
 chmod 640 /app/.env
 chown root:www-data /app/.env
 
-# 1. Handle SQLite Database if configured
-if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
+# 1. Handle Database
+if [ "$DB_CONNECTION" = "mysql" ]; then
+    echo "Checking MySQL connection at ${DB_HOST:-mysql}:${DB_PORT:-3306}..."
+    MAX_TRIES=30
+    COUNT=0
+    until php -r '
+        $host = getenv("DB_HOST") ?: "mysql";
+        $port = getenv("DB_PORT") ?: "3306";
+        $db   = getenv("DB_DATABASE") ?: "sippol";
+        $user = getenv("DB_USERNAME") ?: "root";
+        $pass = getenv("DB_PASSWORD") ?: "";
+        try {
+            new PDO("mysql:host={$host};port={$port};dbname={$db}", $user, $pass, [
+                PDO::ATTR_TIMEOUT => 2,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            ]);
+            exit(0);
+        } catch (\Exception $e) {
+            exit(1);
+        }
+    ' 2>/dev/null; do
+        COUNT=$((COUNT + 1))
+        if [ "$COUNT" -gt "$MAX_TRIES" ]; then
+            echo "⚠️  Timeout waiting for MySQL at ${DB_HOST:-mysql}:${DB_PORT:-3306}."
+            break
+        fi
+        echo "Waiting for MySQL to become ready... (attempt $COUNT/$MAX_TRIES)"
+        sleep 2
+    done
+    echo "✅ MySQL connection successfully established!"
+elif [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
     DB_PATH="${DB_DATABASE:-/app/database/database.sqlite}"
     if [ ! -f "$DB_PATH" ]; then
         echo "Creating SQLite database file at $DB_PATH..."
@@ -44,7 +73,7 @@ chown -R www-data:www-data /app/storage /app/bootstrap/cache
 chmod -R 775 /app/storage /app/bootstrap/cache
 
 # 4. Storage link
-php artisan storage:link --no-interaction || true
+php artisan storage:link --no-interaction 2>/dev/null || true
 
 # 5. Database migrations
 if [ "${AUTORUN_MIGRATIONS:-true}" = "true" ]; then
@@ -54,7 +83,7 @@ if [ "${AUTORUN_MIGRATIONS:-true}" = "true" ]; then
     # Run seeders if RUN_SEEDERS=true
     if [ "${RUN_SEEDERS:-false}" = "true" ]; then
         echo "Running database seeders..."
-        php artisan db:seed --force --no-interaction
+        php artisan db:seed --force --no-interaction || true
     fi
 fi
 

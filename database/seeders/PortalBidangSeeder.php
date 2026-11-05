@@ -16,6 +16,10 @@ class PortalBidangSeeder extends Seeder
      */
     public function run(): void
     {
+        if (ReguPatroli::count() > 0) {
+            return;
+        }
+
         // 1. Seed Portal Trantib (Regu Patroli)
         $regus = [
             [
