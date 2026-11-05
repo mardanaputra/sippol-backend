@@ -97,29 +97,11 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => (function () {
-        $key = env('APP_KEY') ?: getenv('APP_KEY');
-        if (empty($key) || strlen((string) $key) < 16) {
-            $envPath = base_path('.env');
-            if (file_exists($envPath)) {
-                $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                foreach ($lines as $line) {
-                    if (str_starts_with(trim($line), 'APP_KEY=')) {
-                        $val = trim(substr(trim($line), 8));
-                        if (!empty($val)) {
-                            $key = $val;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return $key ? trim(trim((string) $key), "\"' \t\n\r\0\x0B") : null;
-    })(),
+    'key' => env('APP_KEY'),
 
     'previous_keys' => [
         ...array_filter(
-            explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
+            explode(',', env('APP_PREVIOUS_KEYS', ''))
         ),
     ],
 
