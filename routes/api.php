@@ -20,13 +20,13 @@ use App\Http\Controllers\Api\SdaPustakaController;
 use App\Http\Controllers\Api\SatpolKegiatanController;
 use App\Http\Controllers\Api\ActivityLogController;
 
-// Auth Routes (Public)
+// Auth Routes (Public with strict rate limiting)
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
-// Complaint Public Routes (Warga)
-Route::post('/pengaduan', [PengaduanController::class, 'store']);
-Route::get('/pengaduan/{id}', [PengaduanController::class, 'show']);
+// Complaint Public Routes (Warga with Rate Limiting)
+Route::post('/pengaduan', [PengaduanController::class, 'store'])->middleware('throttle:10,1');
+Route::get('/pengaduan/{id}', [PengaduanController::class, 'show'])->middleware('throttle:60,1');
 
 // Authenticated Admin Routes
 Route::middleware('auth:sanctum')->group(function () {

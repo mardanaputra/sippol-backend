@@ -189,6 +189,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'username' => $request->username,
             'email' => $request->email,
+            'role' => 'user', // Security: public registration cannot elevate itself to admin
             'password' => \Illuminate\Support\Facades\Hash::make($request->password),
         ]);
 
@@ -359,6 +360,13 @@ class AuthController extends Controller
             ], 404);
         }
 
+        if (auth()->id() == $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak dapat menghapus akun Anda sendiri saat sedang login.'
+            ], 400);
+        }
+
         $username = $user->username;
 
 
@@ -384,7 +392,7 @@ class AuthController extends Controller
         }
 
         $request->validate([
-            'role' => 'required|string|in:admin,super_admin',
+            'role' => 'required|string|in:admin,super_admin,bidang_trantib,bidang_linmas,bidang_perada,bidang_sda',
         ]);
 
         $user = User::find($id);

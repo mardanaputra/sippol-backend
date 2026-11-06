@@ -102,6 +102,11 @@ class ActivityObserver
 
         $changes = [];
         foreach ($dirty as $key => $value) {
+            // Never log sensitive fields like password hashes or tokens into audit trail
+            if (in_array($key, ['password', 'remember_token'])) {
+                $changes[] = "{$key} telah diperbarui";
+                continue;
+            }
             $original = $model->getOriginal($key);
             $originalStr = is_array($original) ? json_encode($original) : (string)$original;
             $valueStr = is_array($value) ? json_encode($value) : (string)$value;
