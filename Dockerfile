@@ -18,8 +18,8 @@ RUN composer install \
 COPY . .
 RUN composer dump-autoload --optimize --no-dev
 
-# Stage 2: Production FrankenPHP runtime
-FROM dunglas/frankenphp:1-php8.2-alpine AS runner
+# Stage 2: Production FrankenPHP runtime (PHP 8.4)
+FROM dunglas/frankenphp:1-php8.4-alpine AS runner
 WORKDIR /app
 
 # Install system libraries & PHP extensions

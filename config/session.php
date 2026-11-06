@@ -214,4 +214,16 @@ return [
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Session Serialization
+    |--------------------------------------------------------------------------
+    |
+    | In Laravel 13, sessions default to JSON serialization for security
+    | against deserialization gadget chain attacks.
+    |
+    */
+
+    'serialization' => env('SESSION_SERIALIZATION', 'json'),
+
 ];
