@@ -31,10 +31,12 @@ class AuthController extends Controller
                 ], 422);
             }
 
-            $secretKey = env('RECAPTCHA_SECRET_KEY');
+            $secretKey = config('services.recaptcha.secret_key') 
+                ?: env('RECAPTCHA_SECRET_KEY') 
+                ?: getenv('RECAPTCHA_SECRET_KEY');
 
             if (empty($secretKey)) {
-                Log::warning('reCAPTCHA validation skipped: RECAPTCHA_SECRET_KEY is empty in .env');
+                Log::warning('reCAPTCHA validation skipped: RECAPTCHA_SECRET_KEY is empty in configuration/.env');
             } else {
                 try {
                     $response = Http::timeout(5)->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
@@ -47,7 +49,7 @@ class AuthController extends Controller
 
                     if (!$response->json('success')) {
                         // Toleransi khusus untuk tahap development lokal/Ngrok
-                        if (env('APP_ENV') === 'local') {
+                        if (config('app.env') === 'local') {
                             Log::warning('reCAPTCHA validation failed but bypassed because APP_ENV is local.');
                         } else {
                             return response()->json([
@@ -58,7 +60,7 @@ class AuthController extends Controller
                     }
                 } catch (\Exception $e) {
                     Log::error('reCAPTCHA connection failed: ' . $e->getMessage());
-                    if (env('APP_ENV') !== 'local') {
+                    if (config('app.env') !== 'local' && !app()->environment('testing')) {
                         return response()->json([
                             'success' => false,
                             'message' => 'Koneksi ke layanan reCAPTCHA gagal, silakan coba lagi nanti.'
