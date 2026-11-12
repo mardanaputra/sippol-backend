@@ -11,7 +11,7 @@ class PengaduanValidationTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
-    public function complaint_form_can_be_submitted_with_valid_data()
+    public function test_complaint_form_can_be_submitted_with_valid_data()
     {
         $payload = [
             'id_tiket' => 'TKT-' . time(),
@@ -40,7 +40,7 @@ class PengaduanValidationTest extends TestCase
     }
 
     /** @test */
-    public function complaint_form_validation_fails_when_required_fields_are_missing()
+    public function test_complaint_form_validation_fails_when_required_fields_are_missing()
     {
         $response = $this->postJson('/api/pengaduan', []);
 
@@ -57,7 +57,7 @@ class PengaduanValidationTest extends TestCase
     }
 
     /** @test */
-    public function complaint_form_validation_fails_when_id_tiket_is_duplicate()
+    public function test_complaint_form_validation_fails_when_id_tiket_is_duplicate()
     {
         // Insert a complaint first
         $existingTicketId = 'TKT-DUPLICATE';

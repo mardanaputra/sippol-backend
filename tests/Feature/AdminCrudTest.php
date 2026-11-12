@@ -27,7 +27,7 @@ class AdminCrudTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_disposisi_pengaduan_and_status_changes_to_disposisi()
+    public function test_admin_can_disposisi_pengaduan_and_status_changes_to_disposisi()
     {
         Sanctum::actingAs($this->superAdmin, ['*']);
 
@@ -71,7 +71,7 @@ class AdminCrudTest extends TestCase
     }
 
     /** @test */
-    public function admin_cannot_disposisi_already_disposisied_pengaduan()
+    public function test_admin_cannot_disposisi_already_disposisied_pengaduan()
     {
         Sanctum::actingAs($this->superAdmin, ['*']);
 

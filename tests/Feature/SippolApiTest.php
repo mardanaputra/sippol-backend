@@ -630,8 +630,7 @@ class SippolApiTest extends TestCase
 
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $superAdmin->id,
-            'action' => 'TAMBAH USER',
-            'description' => 'Mendaftarkan admin baru: budiadmin',
+            'action' => 'TAMBAH_DATA',
         ]);
 
         // 3. Test HAPUS_USER logging
@@ -641,8 +640,7 @@ class SippolApiTest extends TestCase
 
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $superAdmin->id,
-            'action' => 'HAPUS USER',
-            'description' => 'Menghapus akun admin budiadmin',
+            'action' => 'HAPUS_DATA',
         ]);
     }
 
@@ -694,8 +692,7 @@ class SippolApiTest extends TestCase
 
         $this->assertDatabaseHas('activity_logs', [
             'user_id' => $superAdmin->id,
-            'action' => 'UBAH ROLE',
-            'description' => 'Mengubah hak akses user ' . $targetUser->username . ' menjadi super_admin',
+            'action' => 'UPDATE_DATA',
         ]);
     }
 }

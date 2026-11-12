@@ -21,9 +21,19 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // 1. Verify Google reCAPTCHA Token
-        if (!app()->environment('testing') || $request->has('captcha_token')) {
-            $captchaToken = $request->json('captcha_token') ?? $request->input('captcha_token');
+        $captchaToken = $request->json('captcha_token') ?? $request->input('captcha_token');
 
+        $secretKey = config('services.recaptcha.secret_key')
+            ?: env('RECAPTCHA_SECRET_KEY')
+            ?: getenv('RECAPTCHA_SECRET_KEY');
+
+        $secretKey = trim(trim((string) $secretKey), "\"' \t\n\r\0\x0B");
+
+        $recaptchaEnabled = app()->environment('testing')
+            ? $request->has('captcha_token')
+            : (filter_var(env('RECAPTCHA_ENABLED', true), FILTER_VALIDATE_BOOLEAN) && !empty($secretKey));
+
+        if ($recaptchaEnabled) {
             if (empty($captchaToken)) {
                 return response()->json([
                     'success' => false,
@@ -31,41 +41,68 @@ class AuthController extends Controller
                 ], 422);
             }
 
-            $secretKey = config('services.recaptcha.secret_key') 
-                ?: env('RECAPTCHA_SECRET_KEY') 
-                ?: getenv('RECAPTCHA_SECRET_KEY');
+            try {
+                $postData = [
+                    'secret'   => $secretKey,
+                    'response' => trim(trim((string) $captchaToken), "\"' \t\n\r\0\x0B"),
+                ];
 
-            if (empty($secretKey)) {
-                Log::warning('reCAPTCHA validation skipped: RECAPTCHA_SECRET_KEY is empty in configuration/.env');
-            } else {
-                try {
-                    $response = Http::timeout(5)->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                        'secret'   => $secretKey,
-                        'response' => $captchaToken,
-                        'remoteip' => $request->ip()
-                    ]);
+                $clientIp = $request->ip();
+                // Only send remoteip if it is a valid public IP (avoid sending internal Docker bridge IPs)
+                if ($clientIp && filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    $postData['remoteip'] = $clientIp;
+                }
 
-                    Log::info('ReCAPTCHA Response: ' . $response->body());
+                $response = Http::timeout(5)->asForm()->post('https://www.google.com/recaptcha/api/siteverify', $postData);
 
-                    if (!$response->json('success')) {
-                        // Toleransi khusus untuk tahap development lokal/Ngrok
-                        if (config('app.env') === 'local') {
-                            Log::warning('reCAPTCHA validation failed but bypassed because APP_ENV is local.');
-                        } else {
-                            return response()->json([
-                                'success' => false,
-                                'message' => "Validasi Captcha gagal, silakan centang ulang kotak I'm not a robot."
-                            ], 422);
+                Log::info('ReCAPTCHA Response: ' . $response->body());
+
+                if (!$response->json('success')) {
+                    // Toleransi khusus untuk tahap development lokal
+                    if (config('app.env') === 'local') {
+                        Log::warning('reCAPTCHA validation failed but bypassed because APP_ENV is local.');
+                    } else {
+                        $errorCodes = (array) ($response->json('error-codes') ?? []);
+                        $reasons = [];
+
+                        foreach ($errorCodes as $code) {
+                            switch ($code) {
+                                case 'invalid-input-secret':
+                                    $reasons[] = 'Secret key reCAPTCHA tidak valid. Pastikan RECAPTCHA_SECRET_KEY di .env.backend benar dan sesuai dengan Site Key.';
+                                    break;
+                                case 'invalid-input-response':
+                                    $reasons[] = 'Token reCAPTCHA tidak valid. Pastikan Site Key di frontend dan Secret Key di backend berasal dari pasangan kunci yang sama di Google Console, serta bertipe reCAPTCHA v2 Checkbox ("I am not a robot").';
+                                    break;
+                                case 'hostname-mismatch':
+                                    $reasons[] = 'Domain web (' . $request->getHost() . ') belum didaftarkan di Google reCAPTCHA Admin Console untuk Site Key tersebut.';
+                                    break;
+                                case 'timeout-or-duplicate':
+                                    $reasons[] = 'Token reCAPTCHA sudah kadaluarsa atau sudah digunakan. Silakan centang ulang kotak reCAPTCHA.';
+                                    break;
+                                default:
+                                    $reasons[] = "reCAPTCHA error: {$code}.";
+                                    break;
+                            }
                         }
-                    }
-                } catch (\Exception $e) {
-                    Log::error('reCAPTCHA connection failed: ' . $e->getMessage());
-                    if (config('app.env') !== 'local' && !app()->environment('testing')) {
+
+                        $message = !empty($reasons)
+                            ? implode(' ', $reasons)
+                            : "Validasi Captcha gagal, silakan centang ulang kotak I'm not a robot.";
+
                         return response()->json([
                             'success' => false,
-                            'message' => 'Koneksi ke layanan reCAPTCHA gagal, silakan coba lagi nanti.'
-                        ], 500);
+                            'message' => $message,
+                            'error_codes' => $errorCodes,
+                        ], 422);
                     }
+                }
+            } catch (\Exception $e) {
+                Log::error('reCAPTCHA connection failed: ' . $e->getMessage());
+                if (config('app.env') !== 'local' && !app()->environment('testing')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Koneksi ke layanan Google reCAPTCHA gagal, silakan coba lagi nanti.'
+                    ], 500);
                 }
             }
         }
@@ -327,10 +364,10 @@ class AuthController extends Controller
     public function users(Request $request)
     {
         $userRole = auth()->user()->role;
-        if (!in_array($userRole, ['super_admin', 'admin'])) {
+        if ($userRole !== 'super_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Akses ditolak. Anda tidak memiliki hak akses untuk melihat daftar pengguna.'
+                'message' => 'Akses ditolak. Hanya Super Admin yang memiliki hak akses ini.'
             ], 403);
         }
 

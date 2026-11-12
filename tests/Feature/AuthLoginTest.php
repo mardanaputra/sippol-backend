@@ -26,7 +26,7 @@ class AuthLoginTest extends TestCase
     }
 
     /** @test */
-    public function login_with_valid_credentials_returns_token()
+    public function test_login_with_valid_credentials_returns_token()
     {
         $response = $this->postJson('/api/login', [
             'username' => 'admin_test',
@@ -42,12 +42,12 @@ class AuthLoginTest extends TestCase
                          'id', 'name', 'username', 'role'
                      ]
                  ]);
-        
+
         $this->assertTrue($response->json('success'));
     }
 
     /** @test */
-    public function login_with_invalid_credentials_returns_unauthorized()
+    public function test_login_with_invalid_credentials_returns_unauthorized()
     {
         $response = $this->postJson('/api/login', [
             'username' => 'admin_test',
@@ -62,7 +62,7 @@ class AuthLoginTest extends TestCase
     }
 
     /** @test */
-    public function login_validation_requires_username_and_password()
+    public function test_login_validation_requires_username_and_password()
     {
         $response = $this->postJson('/api/login', []);
 
@@ -71,7 +71,7 @@ class AuthLoginTest extends TestCase
     }
 
     /** @test */
-    public function login_rate_limiting_blocks_after_three_failed_attempts()
+    public function test_login_rate_limiting_blocks_after_three_failed_attempts()
     {
         $payload = [
             'username' => 'admin_test',

@@ -12,7 +12,7 @@ class AdminAuthorizationTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
-    public function staff_bidang_trantib_cannot_access_linmas_endpoints()
+    public function test_staff_bidang_trantib_cannot_access_linmas_endpoints()
     {
         // Simulate a Staff Bidang Trantib
         $userTrantib = User::create([
@@ -34,7 +34,7 @@ class AdminAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function staff_bidang_linmas_cannot_access_super_admin_endpoints()
+    public function test_staff_bidang_linmas_cannot_access_super_admin_endpoints()
     {
         $userLinmas = User::create([
             'name' => 'Staff Linmas',
@@ -57,7 +57,7 @@ class AdminAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function super_admin_can_access_all_endpoints()
+    public function test_super_admin_can_access_all_endpoints()
     {
         $superAdmin = User::create([
             'name' => 'Super Admin',
